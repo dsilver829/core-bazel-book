@@ -1,26 +1,26 @@
 load(":bazel/archive.bzl", "archive")
 
 archive(
-    name="documentation",
-    files=[
+    name = "documentation",
+    out = "documentation.zip",
+    files = [
         "src/README.md",
     ],
-    out="documentation.zip",
 )
 
 archive(
-    name="release",
-    files=[
+    name = "release",
+    out = "release.zip",
+    files = [
         "src/RELEASE.md",
     ],
-    out="release.zip",
 )
 
 archive(
-    name="all",
-    files=[
+    name = "all",
+    out = "all.zip",
+    files = [
         "src/README.md",
         "src/RELEASE.md",
     ],
-    out="all.zip",
 )

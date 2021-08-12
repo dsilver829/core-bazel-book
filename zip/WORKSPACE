@@ -1,0 +1,81 @@
+load("@bazel_tools//tools/build_defs/repo::http.bzl", "http_archive")
+
+RULES_JVM_EXTERNAL_TAG = "3.2"
+RULES_JVM_EXTERNAL_SHA = ""
+
+http_archive(
+    name = "rules_jvm_external",
+    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
+    sha256 = RULES_JVM_EXTERNAL_SHA,
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+)
+
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+    artifacts = [
+        "org.apache.commons:commons-compress:1.20",
+        "commons-io:commons-io:2.7",
+        "org.tukaani:xz:1.8",
+    ],
+    repositories = [
+        "https://jcenter.bintray.com/",
+        "https://maven.google.com",
+        "https://repo1.maven.org/maven2",
+    ]
+)
+
+java_binary(
+    name = "_seven_zip_binary",
+    srcs = glob([
+        "src/main/java/**/*.java"
+    ]),
+    main_class = "com.germaniumhq.ArchiveRule",
+    deps = [
+        "@maven//:org_apache_commons_commons_compress",
+        "@maven//:commons_io_commons_io",
+        "@maven//:org_tukaani_xz",
+    ]
+)
+
+package(default_visibility = ["//visibility:public"])
+
+seven_zip = rule(
+    implementation = _seven_zip,
+    attrs = {
+        "_seven_zip_binary": attr.label(
+            executable=True,
+            default=":_seven_zip_binary",
+            cfg="host",
+        ),
+        "version_data": attr_label(
+            allow_single_file=True,
+            mandatory=True,
+        ),
+        "archive_files": attr.label_list(
+            allow_files=True,
+            mandatory=True,
+            allow_empty=False,
+        ),
+    }
+)
+
+def _seven_zip(ctx):
+    out = ctx.actions.declare_file("{}.7z".format(ctx.label.name))
+
+    inputs = [ctx.file.version_data]
+    inputs.extend(ctx.files.archive_files)
+
+    args = ctx.actions.args()
+    args.add(out)
+    args.add(ctx.file.version_data)
+    args.add_all(ctx.files.archive_files)
+
+    ctx.actions.run(
+        executable=ctx.executable._seven_zip_binary,
+        arguments=[args],
+        inputs=inputs,
+        outputs=[out]
+    )
+
+    return [DefaultInfo(files=depset([out]))]
